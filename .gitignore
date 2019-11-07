@@ -3,3 +3,5 @@ drivers*
 custom*
 .pytest*
 __py*
+drivers.json
+geckodriver.log
