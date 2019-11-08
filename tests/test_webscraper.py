@@ -1,4 +1,4 @@
-from nDash import scraper
+from webscraper import scraper
 
 
 def test_webscraper_setup_teardown():

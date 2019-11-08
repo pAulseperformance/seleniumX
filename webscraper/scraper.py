@@ -1,6 +1,6 @@
 import random
 import time
-from nDash.randomizer import get_bspline
+from webscraper.randomizer import get_bspline
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By

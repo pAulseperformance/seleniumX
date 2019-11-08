@@ -5,3 +5,4 @@ custom*
 __py*
 drivers.json
 geckodriver.log
+*.log
