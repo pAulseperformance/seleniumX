@@ -1,4 +1,4 @@
-import scraper
+from scraper import WebScraper
 import logging
 
 
@@ -7,7 +7,6 @@ logging.basicConfig(format="%(asctime)s %(levelname)s:%(name)s: %(message)s", da
 logging.getLogger(__name__)
 
 
-ws = scraper.WebScraper()
-ws.logger
+ws = WebScraper()
 ws.setup_driver()
-ws.driver.get('https://www.google.com')
+ws.driver.get('https://ipleak.net/')
