@@ -147,14 +147,13 @@ class WebScraper:
         self.logger.info(f"{len(set(links))} unique links collected from {self.driver.title}")
         return set(links)
 
-
-    def move_mouse_random(self):
-        # Imitate human mouse movements.
+    def random_move_mouse(self):
+        # Imitate human mouse movements with bspline movements.
 
         action = ActionChains(self.driver)
 
         startElement = self.driver.find_element_by_id("//a[href]")
-        # startElement = self.driver.find_element_by_id('drawer')
+
         # First, go to your start point or Element
         action.move_to_element_with_offset(startElement, 0, 0)
         action.perform()
@@ -162,7 +161,7 @@ class WebScraper:
         for mouse_x, mouse_y in get_bspline():
             action.move_by_offset(mouse_x, mouse_y)
             action.perform()
-            time.sleep(.1)
+            self.random_sleep(sleep_range=(0, .05))
             print(mouse_x, mouse_y)
 
     def test_distil_bot_detection(self):
@@ -188,7 +187,7 @@ class WebScraper:
             element.send_keys(key)
             self.random_sleep(sleep_range=(0, 1))
 
-    def randeom_navigate_element_to_element(self):
+    def random_navigate_element_to_element(self):
         # TODO
         # Get starting element Coordinates
         # Get ending element coordinates
