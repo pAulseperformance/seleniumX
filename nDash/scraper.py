@@ -1,9 +1,12 @@
 import random
 import time
+from nDash.randomizer import get_bspline
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
@@ -20,8 +23,9 @@ class WebScraper:
         self.driver = None
         self.logger = logging.getLogger(__name__)
         self.logger.debug('creating an instance of %s', __class__)
-        self.implicit_wait_range = (2, 10)
+        self.implicit_wait_range = (0, 0)
         self.implicit_wait_time = self.randomize_wait_time()
+        self.logger.info(f"Implicit Wait time is set to {self.implicit_wait_time}")
         self.sleep_range = (2, 10)  # Should probably make this range to 5 minutes for each page to imitate human behavior
 
     def setup_driver(self, driver: object = 'Chrome') -> object:
@@ -41,17 +45,26 @@ class WebScraper:
             options.add_experimental_option('useAutomationExtension', False)
             options.headless = False
             self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+            self.logger.info("Chromedriver Online.")
         else:
             self.logger.error('Driver Not supported.')
             return
 
+        self.logger.debug(f"Setting Driver Implicit wait time to: {self.implicit_wait_time}")
         self.driver.implicitly_wait(self.implicit_wait_time)
 
     def randomize_wait_time(self):
         return random.uniform(*self.implicit_wait_range)
 
+    def sleep_random(self, sleep_range=None):
+        if sleep_range is None:
+            time.sleep(random.uniform(*self.sleep_range))
+        else:
+            time.sleep(random.uniform(*sleep_range))
+
     def teardown_driver(self):
         self.driver.quit()
+        self.logger.info('Driver Offline')
 
     def check_safe_scraping(self):
         # This function should check if the webpage to be scraped has bot detection.
@@ -94,16 +107,17 @@ class WebScraper:
         if len(title) > 2:
             title = ''.join(self.driver.title.split(' ')[:2])
         self.driver.save_screenshot(f'{title}.png')
+        self.logger.info(f"Saved Screenshot to {title}.png")
 
     def _js_inject_js(self, js=None, is_async=True, *args):
         if is_async:
-            self.driver.execute_async_script(js)
+            self.driver.execute_async_script(js, *args)
         else:
-            print(args)
             self.driver.execute_script(js, *args)
 
     def js_scroll_into_view(self, element):
         # Uses Javascript to scroll an element into view.
+        self.logger.debug("Scrolling element into view")
         js = "arguments[0].scrollIntoView();"
         try:
             # self.driver.execute_script("arguments[0].scrollIntoView();", element)
@@ -114,6 +128,7 @@ class WebScraper:
 
     def js_scroll_to_bottom(self):
         # Scrolls to bottom of page. Good for inifinite feeds like FB or twitter.
+        self.logger.debug("Scrolling window to bottom...")
         self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     def js_webdriver_false(self):
@@ -123,19 +138,32 @@ class WebScraper:
         # injected_javascript = "Object.defineProperty(navigator, 'webdriver',{ get: () => false, });"
         pass
 
-    def get_all_links(self):
+    def get_all_unique_links(self):
+        # Finds all links on current page and returns a set of unique links
         elems = self.driver.find_elements_by_xpath("//a[@href]")
         links = []
         for elem in elems:
             links.append(elem.get_attribute("href"))
-        return links
+        self.logger.info(f"{len(set(links))} unique links collected from {self.driver.title}")
+        return set(links)
 
-    def sleep_random(self):
-        time.sleep(random.uniform(*self.sleep_range))
 
     def move_mouse_random(self):
         # Imitate human mouse movements.
-        pass
+
+        action = ActionChains(self.driver)
+
+        startElement = self.driver.find_element_by_id("//a[href]")
+        # startElement = self.driver.find_element_by_id('drawer')
+        # First, go to your start point or Element
+        action.move_to_element_with_offset(startElement, 0, 0)
+        action.perform()
+
+        for mouse_x, mouse_y in get_bspline():
+            action.move_by_offset(mouse_x, mouse_y)
+            action.perform()
+            time.sleep(.1)
+            print(mouse_x, mouse_y)
 
     def test_distil_bot_detection(self):
         # url = 'https://www.controller.com'
@@ -148,4 +176,7 @@ class WebScraper:
         # ws.driver.get(links[10])
         pass
 
+    def test_google(self):
+        self.setup_driver()
+        self.driver.get('https://www.google.com')
 
