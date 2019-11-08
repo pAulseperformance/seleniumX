@@ -56,7 +56,7 @@ class WebScraper:
     def randomize_wait_time(self):
         return random.uniform(*self.implicit_wait_range)
 
-    def sleep_random(self, sleep_range=None):
+    def random_sleep(self, sleep_range=None):
         if sleep_range is None:
             time.sleep(random.uniform(*self.sleep_range))
         else:
@@ -179,4 +179,19 @@ class WebScraper:
     def test_google(self):
         self.setup_driver()
         self.driver.get('https://www.google.com')
+        search_element = self.driver.find_element_by_name('q')
+        self.random_send_keys('cats', search_element)
+        search_element.submit()
 
+    def random_send_keys(self, keys, element):
+        for key in keys:
+            element.send_keys(key)
+            self.random_sleep(sleep_range=(0, 1))
+
+    def randeom_navigate_element_to_element(self):
+        # TODO
+        # Get starting element Coordinates
+        # Get ending element coordinates
+        # Randomize mouse path to end element
+        # element.location_once_scrolled_into_view
+        pass
