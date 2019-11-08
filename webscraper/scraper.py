@@ -165,6 +165,8 @@ class WebScraper:
             print(mouse_x, mouse_y)
 
     def test_distil_bot_detection(self):
+        # This website has distil technology.
+        # A good test website to see if we can bypass bot detection
         # url = 'https://www.controller.com'
         # ws = WebScraper()
         # ws.setup_driver()
@@ -176,6 +178,8 @@ class WebScraper:
         pass
 
     def test_google(self):
+        # Also another website to test for bot detection.
+        # TODO: After submitting search we should check for captchas, if not we are good!
         self.setup_driver()
         self.driver.get('https://www.google.com')
         search_element = self.driver.find_element_by_name('q')
