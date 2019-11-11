@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 import logging
@@ -205,3 +205,15 @@ class WebScraper:
         # Randomize mouse path to end element
         # element.location_once_scrolled_into_view
         pass
+
+    def login_and_authenticate(self, login_url, username, password):
+        self.driver.get(login_url)
+        # TODO: Finish this general login feature so it can be used for most websites
+        try:
+            email_element = self.explicit_wait(By.ID, 'email')
+            self.random_send_keys(username, email_element)
+        except ElementNotInteractableException:
+            # Case where element is on the page, but is not interactable
+            # We need to find another element that is similar.
+            self.logger.debug('Could not send keys to email element')
+            email_element = self.driver.find_element_by_xpath("//*[contains(text(), 'email')]")
