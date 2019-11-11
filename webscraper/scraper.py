@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
-
+from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 import logging
@@ -93,14 +93,21 @@ class WebScraper:
         else:
             self.logger.info('Your headless browser has not been detected. :)')
 
-    def explicit_wait(self, element_name, time=10):
-        # TODO  Impliment this
-        selector = By.ID
+    def explicit_wait(self, selector, element_name, wait_time=10):
+        """ Wrapper for explicit waits. Function waits until the element appears on the page; if element does not appear
+        after wait_time an exception is raised.
+
+        :param selector: Locator for element. For Convenience use the By class in selenium.webdriver.common.by for passing selector methods.
+        :param element_name: Name of the element for which the locator searchs.
+        :param wait_time: Amount of time to wait before exception
+        :return: Element
+        """
         try:
-            element = WebDriverWait(self.driver, time).until(EC.presence_of_element_located((selector, element_name)))
+            element = WebDriverWait(self.driver, wait_time).until(EC.presence_of_element_located((selector, element_name)))
             return element
-        except Exception as e:
-            self.logger.error(e)
+        except TimeoutException:
+            self.logger.error(f"{element_name} not found at {selector} on {self.driver.title}. Timedout after {wait_time}")
+            raise TimeoutException
 
     def save_screenshot(self):
         title = self.driver.title.split(' ')
