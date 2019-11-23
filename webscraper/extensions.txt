@@ -1,0 +1,2 @@
+https://pypi.org/project/easy-selenium/
+https://github.com/pythad/selenium_extensions/blob/master/selenium_extensions/core.py
