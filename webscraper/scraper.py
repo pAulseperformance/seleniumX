@@ -16,7 +16,6 @@ from selenium.webdriver.support.events import (
 )
 
 from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.firefox import GeckoDriverManager
 import logging
 
 
@@ -103,7 +102,8 @@ class ChromeFactory:
         # chrome configuration
         # More: https://github.com/SeleniumHQ/docker-selenium/issues/89
         # And: https://github.com/SeleniumHQ/docker-selenium/issues/87
-        chrome_options.add_argument("--headless")
+        # chrome_options.add_argument("--headless")
+        chrome_options.headless = False
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--remote-debugging-port=9222")
@@ -245,8 +245,10 @@ class WebScraper:
         else:
             self.logger.info("Your headless browser has not been detected. :)")
 
-    def wait(self, wait_time=20):
-        return WebDriverWait(self.driver, wait_time)
+    def wait(self, wait_time=20, **kwargs):
+        """ Wrapper for WebDriverWait """
+        wait = WebDriverWait(self.driver, wait_time, **kwargs)
+        return wait
 
     def explicit_wait(self, selector, element_name, wait_time=10):
         """ Wrapper for explicit waits. Function waits until the element appears on the page; if element does not appear
@@ -399,15 +401,22 @@ class WebScraper:
         # element.location_once_scrolled_into_view
         pass
 
-    def login_and_authenticate(self, login_url, username, password):
-        self.driver.get(login_url)
-        self.logger.info(f"Logging in at {login_url}")
-        email_element = self.driver.find_element_by_id("editableString_input_7")
-        self.random_send_keys(element=email_element, keys=username)
-        password_element = self.driver.find_element_by_id("editableString_input_8")
+    def login_and_authenticate(self, login_btn, username_element, password_element, username, password):
+        current_url = self.driver.current_url
+        self.random_send_keys(element=username_element, keys=username)
         self.random_send_keys(element=password_element, keys=password)
-        self.driver.find_element_by_xpath("//*[contains(text(), 'Login')]").click()
-        # TODO Wait for form to submit and new page to load, just in case we have the wrong credentials
+        # login_btn = self.driver.find_element(By.XPATH, "//*[contains(text(), 'Login')]")
+        # submit_btn = self.driver.find_element(By.XPATH, "//*[contains(text(), 'Sign in')]")
+        login_btn.click()
+        # Wait for url to change to confirm login.
+        self.logger.info("Logging in...")
+        count = 0
+        while current_url == self.driver.current_url:
+            if count > SCRIPT_TIMEOUT_IN_SEC:
+                raise TimeoutException
+            time.sleep(1)
+            count += 1
+        self.logger.info("Succesfully Logged in.")
 
     def random_element_rect(self):
         # function for moving the mouse to a random starting position on the page.
@@ -419,6 +428,7 @@ class WebScraper:
         action.perform()
 
         return random_start_element.rect
+
 
     def __del__(self):
         self.teardown_driver()
