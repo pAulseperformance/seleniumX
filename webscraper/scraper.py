@@ -1,70 +1,218 @@
 import random
 import time
 from webscraper.randomizer import get_bspline
-
+from sys import platform
+import os
+from typing import Tuple
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from selenium.webdriver.support.events import (
+    EventFiringWebDriver,
+    AbstractEventListener,
+)
+
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 import logging
 
 
-logging.basicConfig(format="%(asctime)s %(levelname)s:%(name)s: %(message)s", datefmt='%H:%M:%S',
-                        level=logging.INFO, )
-logging.getLogger(__name__)
+PAGE_LOAD_TIMEOUT_IN_SEC = 60
+IMPLICITLY_WAIT_RANGE = (0, 0)  # We use a range so the wait times can be randomized.
+SCRIPT_TIMEOUT_IN_SEC = 60
+VERBOSE = False
+
+
+class MyListener(AbstractEventListener):
+    """ A Wrapper around an arbitrary webdriver instance which support firing events."""
+
+    def before_navigate_to(self, url, driver):
+        if VERBOSE:
+            print("Before navigate to %s" % url)
+
+    def after_navigate_to(self, url, driver):
+        if VERBOSE:
+            print("After navigate to %s" % url)
+        WebScraper.random_sleep()
+
+    def on_exception(self, exception, driver):
+        if VERBOSE:
+            self.logger.info("On exception listener", exception)
+        WebScraper.random_sleep()
+
+    def before_find(self, by, value, driver):
+        if VERBOSE:
+            print(f"Before find by {by} with  {value}")
+
+    def after_find(self, by, value, driver):
+        if VERBOSE:
+            print(f"After find by {by} with  {value}")
+
+    def before_click(self, element, driver):
+        if VERBOSE:
+            print(f"Before click {element}")
+
+    def after_click(self, element, driver):
+        if VERBOSE:
+            print(f"After click {element}")
+
+    def before_execute_script(self, script, driver):
+        if VERBOSE:
+            print(f"Before Execute Script {script}")
+
+    def after_execute_script(self, script, driver):
+        if VERBOSE:
+            print(f"After Execute Script {script}")
+        WebScraper.random_sleep()
+
+
+class ChromeFactory:
+
+    @staticmethod
+    def create_chrome(version='latest', path=None):
+        """
+        Build default Chrome instance.
+        """
+
+        chrome_driver_bin = ChromeDriverManager(version=version, path=path).install()
+
+        chrome_options = ChromeFactory.build_chrome_options()
+        driver = webdriver.Chrome(
+            executable_path=chrome_driver_bin, options=chrome_options
+        )
+
+        driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT_IN_SEC)
+        driver.set_script_timeout(SCRIPT_TIMEOUT_IN_SEC)
+
+        # driver_wrapper = ExtendedWebDriver(driver, WebDriverErrorHandler())
+        driver_wrapper = EventFiringWebDriver(driver, MyListener())
+
+        return driver_wrapper
+
+    @staticmethod
+    def build_chrome_options():
+
+        # https: // sites.google.com / a / chromium.org / chromedriver / capabilities
+
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.accept_untrusted_certs = True
+        chrome_options.assume_untrusted_cert_issuer = True
+        # chrome configuration
+        # More: https://github.com/SeleniumHQ/docker-selenium/issues/89
+        # And: https://github.com/SeleniumHQ/docker-selenium/issues/87
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--remote-debugging-port=9222")
+        # chrome_options.add_argument("--disable-impl-side-painting")
+        # chrome_options.add_argument("--disable-setuid-sandbox")
+        # chrome_options.add_argument("--disable-seccomp-filter-sandbox")
+        # chrome_options.add_argument("--disable-breakpad")
+        # chrome_options.add_argument("--disable-client-side-phishing-detection")
+        # chrome_options.add_argument("--disable-cast")
+        # chrome_options.add_argument("--disable-cast-streaming-hw-encoding")
+        # chrome_options.add_argument("--disable-cloud-import")
+        # chrome_options.add_argument("--disable-popup-blocking")
+        # chrome_options.add_argument("--ignore-certificate-errors")
+        # chrome_options.add_argument("--disable-session-crashed-bubble")
+        # chrome_options.add_argument("--disable-ipv6")
+        # chrome_options.add_argument("--allow-http-screen-capture")
+        # chrome_options.add_argument("--start-maximized")
+
+        # Experimental Options -- These may break chromedriver in future releases
+        # Experimental Options used to undefine navigator.webdriver = true
+        # Does not work in headless mode.
+        # These options avoid bot detection from distil.
+        # More info here: https://stackoverflow.com/questions/53039551/selenium-webdriver-modifying-navigator-webdriver-flag-to-prevent-selenium-detec?noredirect=1&lq=1
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option("useAutomationExtension", False)
+        # These options remove password manager
+        # chrome_options.add_experimental_option('credentials_enable_service', False)
+        # chrome_options.add_experimental_option('profile.password_manager_enabled', False)
+        # Testing these options
+        # chrome_options.add_experimental_option("excludeSwitches", ['bypass-app-banner-engagement-checks',
+        #                                                            'google-password-manager',
+        #                                                            'enable-automation'])
+        # Add User Preferences
+        prefs = {"credentials_enable_service": False}  # Disables password manager
+        prefs.update(
+            {"profile.password_manager_enabled": False}
+        )  # Disables password manager
+        chrome_options.add_experimental_option("prefs", prefs)
+
+        # For Heroku
+        chrome_bin = os.environ.get("GOOGLE_CHROME_BIN")
+        if chrome_bin:
+            chrome_options.binary_location = chrome_bin
+
+        return chrome_options
+
+    @staticmethod
+    def get_driver_path():
+
+        chrome_driver_folder_name = ""
+        if platform == "linux" or platform == "linux2":
+            # linux
+            chrome_driver_folder_name = "linux_x64"
+        elif platform == "darwin":
+            # OS X
+            chrome_driver_folder_name = "mac_x64"
+        else:
+            raise ValueError("Platform not identified")
+
+        chrome_driver_path = os.path.normpath(
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                os.pardir,
+                os.pardir,
+                os.pardir,
+                "resources",
+                "chrome",
+                chrome_driver_folder_name,
+                "chromedriver",
+            )
+        )
+        assert os.path.isfile(chrome_driver_path), (
+            "Chrome driver must exists: %s" % chrome_driver_path
+        )
+
+        return chrome_driver_path
 
 
 class WebScraper:
     def __init__(self):
         self.driver = None
         self.logger = logging.getLogger(__name__)
-        self.logger.debug('creating an instance of %s', __class__)
-        self.implicit_wait_range = (0, 0)
-        self.implicit_wait_time = self.randomize_wait_time()
-        self.logger.info(f"Implicit Wait time is set to {self.implicit_wait_time}")
-        self.sleep_range = (2, 10)  # Should probably make this range to 5 minutes for each page to imitate human behavior
+        self.logger.debug("creating an instance of %s", __class__)
+        self.implicit_wait_range = IMPLICITLY_WAIT_RANGE
+        self.implicit_wait_time = self.randomize_wait_time
 
-    def setup_driver(self, driver: object = 'Chrome') -> object:
-        self.logger.info('Setting up webdriver with %s', driver)
-        if driver == 'Firefox':
-            options = webdriver.FirefoxOptions()
-            options.headless = False
-            self.driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=options)
-        elif driver == 'Chrome':
-            options = webdriver.ChromeOptions()
-            # Experimental Options used to undefine navigator.webdriver = true
-            # Only tested in chrome. Does not work in headless mode.
-            # These options avoid bot detection from distil.
-            # More info here: https://stackoverflow.com/questions/53039551/selenium-webdriver-modifying-navigator-webdriver-flag-to-prevent-selenium-detec?noredirect=1&lq=1
-            options.add_argument("start-maximized")
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_experimental_option('useAutomationExtension', False)
-            options.headless = False
-            self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
-            self.logger.info("Chromedriver Online.")
-        else:
-            self.logger.error('Driver Not supported.')
-            return
+    def setup_driver(self, chrome_driver_path=None):
+        if chrome_driver_path is None:
+            chrome_driver_path = os.environ.get("CHROMEDRIVER_PATH", os.path.abspath("."))
 
-        self.logger.debug(f"Setting Driver Implicit wait time to: {self.implicit_wait_time}")
+        self.driver = ChromeFactory.create_chrome(version='latest', path=chrome_driver_path)
+        self.logger.info("Chromedriver Online.")
+        self.logger.debug(
+            f"Setting Driver Implicit wait time to: {self.implicit_wait_time}"
+        )
         self.driver.implicitly_wait(self.implicit_wait_time)
 
+    @property
     def randomize_wait_time(self):
         return random.uniform(*self.implicit_wait_range)
 
-    def random_sleep(self, sleep_range=None):
-        if sleep_range is None:
-            time.sleep(random.uniform(*self.sleep_range))
-        else:
-            time.sleep(random.uniform(*sleep_range))
+    @staticmethod
+    def random_sleep(sleep_range: Tuple[int, int] = (5, 10)) -> None:
+        sleep_time = random.uniform(*sleep_range)
+        time.sleep(sleep_time)
 
     def teardown_driver(self):
         self.driver.quit()
-        self.logger.info('Driver Offline')
+        self.logger.info("Driver Offline")
 
     def check_safe_scraping(self):
         # This function should check if the webpage to be scraped has bot detection.
@@ -77,21 +225,28 @@ class WebScraper:
         # This function checks if the headless browser is being deteced as a headless browser.
         # Currenly it will fail the test everytime we run headless, there might be a workaround for this
         # For now we run the browser with a graphical interface to avoid detection.
-        url = 'https://ipleak.net/'
-        xpath = '/html/body/div/div[3]/div[10]/div[1]/table/tbody/tr[1]/td[2]'
-        text = 'Chrome'
+        url = "https://ipleak.net/"
+        xpath = "/html/body/div/div[3]/div[10]/div[1]/table/tbody/tr[1]/td[2]"
+        text = "Chrome"
         self.driver.get(url)
         try:
-            WebDriverWait(self.driver, 20).until(EC.text_to_be_present_in_element((By.XPATH, xpath), text))
-            self.logger.info('Page Loaded.')
+            WebDriverWait(self.driver, 20).until(
+                EC.text_to_be_present_in_element((By.XPATH, xpath), text)
+            )
+            self.logger.info("Page Loaded.")
         except Exception as e:
             self.logger.error(e)
 
-        if self.driver.page_source.find('HeadlessChrome') > 0:
-            self.logger.info('Your browser is currently being detected as headless, '
-                             'reconfigure your options or run headless=False')
+        if self.driver.page_source.find("HeadlessChrome") > 0:
+            self.logger.info(
+                "Your browser is currently being detected as headless, "
+                "reconfigure your options or run headless=False"
+            )
         else:
-            self.logger.info('Your headless browser has not been detected. :)')
+            self.logger.info("Your headless browser has not been detected. :)")
+
+    def wait(self, wait_time=20):
+        return WebDriverWait(self.driver, wait_time)
 
     def explicit_wait(self, selector, element_name, wait_time=10):
         """ Wrapper for explicit waits. Function waits until the element appears on the page; if element does not appear
@@ -103,20 +258,36 @@ class WebScraper:
         :return: Element
         """
         try:
-            element = WebDriverWait(self.driver, wait_time).until(EC.presence_of_element_located((selector, element_name)))
-            return element
+            return self.wait(wait_time).until(
+                EC.presence_of_element_located((selector, element_name))
+            )
         except TimeoutException:
-            self.logger.error(f"{element_name} not found at {selector} on {self.driver.title}. Timedout after {wait_time}")
+            self.logger.error(
+                f"{element_name} not found at {selector} on {self.driver.title}. Timeout after {wait_time}"
+            )
             raise TimeoutException
 
-    def save_screenshot(self):
-        title = self.driver.title.split(' ')
-        if len(title) > 2:
-            title = ''.join(self.driver.title.split(' ')[:2])
-        self.driver.save_screenshot(f'{title}.png')
-        self.logger.info(f"Saved Screenshot to {title}.png")
+    def save_screenshot(self, filename: str = None) -> None:
+        """ Saves a .png screen shot to relative screenshots folder.
+        :param filename: String name for local file. If empty, will be the title of current url.
+        """
 
-    def _js_inject_js(self, js=None, is_async=True, *args):
+        screenshots_dir = "screenshots"
+        if filename is None:
+            title = self.driver.title.split(" ")
+            if len(title) > 2:
+                filename = "".join(self.driver.title.split(" ")[:2])
+            else:
+                filename = title
+
+        if not os.path.exists(screenshots_dir):
+            os.makedirs(screenshots_dir)
+
+        relative_file_path = os.path.join(screenshots_dir, filename)
+        self.driver.save_screenshot(f"{relative_file_path}.png")
+        self.logger.info(f"Saved Screenshot to {relative_file_path}.png")
+
+    def _js_inject_js(self, js=None, is_async=False, *args):
         if is_async:
             self.driver.execute_async_script(js, *args)
         else:
@@ -127,16 +298,31 @@ class WebScraper:
         self.logger.debug("Scrolling element into view")
         js = "arguments[0].scrollIntoView();"
         try:
-            # self.driver.execute_script("arguments[0].scrollIntoView();", element)
             self._js_inject_js(js, False, element)
         except Exception as e:
-            self.logger.error('Element not found?\n %s', e)
+            self.logger.error("Element not found?\n %s", e)
             raise e
 
     def js_scroll_to_bottom(self):
         # Scrolls to bottom of page. Good for inifinite feeds like FB or twitter.
         self.logger.debug("Scrolling window to bottom...")
         self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+    def js_get_page_state(self):
+        """
+        Javascript for getting document.readyState
+        :return: Pages state.
+
+        More Info: https://developer.mozilla.org/en-US/docs/Web/API/Document/readyState
+        """
+        ready_state = self.driver.execute_script("return document.readyState")
+        if ready_state == "loading":
+            self.logger.debug("Loading Page...")
+        elif ready_state == "interactive":
+            self.logger.debug("Page is interactive")
+        elif ready_state == "complete":
+            self.logger.debug("The page is fully loaded!")
+        return ready_state
 
     def js_webdriver_false(self):
         # Excecute this script on every page load before other client side java runs.
@@ -151,7 +337,9 @@ class WebScraper:
         links = []
         for elem in elems:
             links.append(elem.get_attribute("href"))
-        self.logger.info(f"{len(set(links))} unique links collected from {self.driver.title}")
+        self.logger.info(
+            f"{len(set(links))} unique links collected from {self.driver.title}"
+        )
         return set(links)
 
     def random_move_mouse(self):
@@ -168,7 +356,7 @@ class WebScraper:
         for mouse_x, mouse_y in get_bspline():
             action.move_by_offset(mouse_x, mouse_y)
             action.perform()
-            self.random_sleep(sleep_range=(0, .05))
+            self.random_sleep(sleep_range=(0, 0.05))
             print(mouse_x, mouse_y)
 
     def test_distil_bot_detection(self):
@@ -187,13 +375,18 @@ class WebScraper:
     def test_google(self):
         # Also another website to test for bot detection.
         # TODO: After submitting search we should check for captchas, if not we are good!
-        self.setup_driver()
-        self.driver.get('https://www.google.com')
-        search_element = self.driver.find_element_by_name('q')
-        self.random_send_keys('cats', search_element)
+        if self.driver is None:
+            self.setup_driver()
+
+        self.driver.get("https://www.google.com")
+        search_element = self.driver.find_element_by_name("q")
+        self.random_send_keys("cats", search_element)
         search_element.submit()
 
     def random_send_keys(self, keys, element):
+        """
+        Randomizes Sleep between key sends for element.
+        """
         for key in keys:
             element.send_keys(key)
             self.random_sleep(sleep_range=(0, 1))
@@ -208,12 +401,24 @@ class WebScraper:
 
     def login_and_authenticate(self, login_url, username, password):
         self.driver.get(login_url)
-        # TODO: Finish this general login feature so it can be used for most websites
-        try:
-            email_element = self.explicit_wait(By.ID, 'email')
-            self.random_send_keys(username, email_element)
-        except ElementNotInteractableException:
-            # Case where element is on the page, but is not interactable
-            # We need to find another element that is similar.
-            self.logger.debug('Could not send keys to email element')
-            email_element = self.driver.find_element_by_xpath("//*[contains(text(), 'email')]")
+        self.logger.info(f"Logging in at {login_url}")
+        email_element = self.driver.find_element_by_id("editableString_input_7")
+        self.random_send_keys(element=email_element, keys=username)
+        password_element = self.driver.find_element_by_id("editableString_input_8")
+        self.random_send_keys(element=password_element, keys=password)
+        self.driver.find_element_by_xpath("//*[contains(text(), 'Login')]").click()
+        # TODO Wait for form to submit and new page to load, just in case we have the wrong credentials
+
+    def random_element_rect(self):
+        # function for moving the mouse to a random starting position on the page.
+        # Returns dictionary of random element size and location
+        action = ActionChains(self.driver)
+        start_elements = self.driver.find_elements_by_id("//a[href]")
+        random_start_element = start_elements[random.randint(0, len(start_elements))]
+        action.move_to_element_with_offset(random_start_element, 0, 0)
+        action.perform()
+
+        return random_start_element.rect
+
+    def __del__(self):
+        self.teardown_driver()
