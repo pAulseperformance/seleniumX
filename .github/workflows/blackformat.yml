@@ -21,6 +21,6 @@ jobs:
         run: |
           git config --global user.name 'Paul Mendes'
           git config --global user.email 'paul-mendes@users.noreply.github.com'
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUBAUTOCOMMIT_TOKEN }}@github.com/${{ github.repository }}
+          git remote set-url origin https://x-access-token:${{ secrets.AUTOCOMMIT_TOKEN }}@github.com/${{ github.repository }}
           git commit -am "refactor: Automated Black Format Changes"
           git push
