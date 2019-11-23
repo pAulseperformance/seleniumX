@@ -1,4 +1,4 @@
-from webscraper import scraper
+from seleniumX import scraper
 import tempfile
 import pytest
 from selenium.webdriver.common.by import By
@@ -36,9 +36,9 @@ def test_login_and_authenticate_linkedin(tempd):
 # def test_bot_detection():
 #     # Distil is a bot detection
 #     # Navigate to a known website with bot detector and check if bot can be detected
-#     webscraper = scraper.WebScraper()
-#     webscraper.setup_driver()
-#     webscraper.driver.get('https://www.controller.com')
+#     seleniumX = scraper.WebScraper()
+#     seleniumX.setup_driver()
+#     seleniumX.driver.get('https://www.controller.com')
 #     # chase.com
 
 

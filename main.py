@@ -1,1 +1,1 @@
-from webscraper.scraper import WebScraper
+from seleniumX.scraper import WebScraper

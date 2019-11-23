@@ -1,6 +1,6 @@
 import random
 import time
-from webscraper.randomizer import get_bspline
+from seleniumX.randomizer import get_bspline
 from sys import platform
 import os
 from typing import Tuple
