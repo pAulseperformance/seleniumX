@@ -1,6 +1,6 @@
 import random
 import time
-from seleniumX.randomizer import get_bspline
+# from seleniumX.randomizer import get_bspline
 from sys import platform
 import os
 from typing import Tuple
@@ -346,20 +346,20 @@ class WebScraper:
 
     def random_move_mouse(self):
         # Imitate human mouse movements with bspline movements.
-
-        action = ActionChains(self.driver)
-
-        startElement = self.driver.find_element_by_id("//a[href]")
-
-        # First, go to your start point or Element
-        action.move_to_element_with_offset(startElement, 0, 0)
-        action.perform()
-
-        for mouse_x, mouse_y in get_bspline():
-            action.move_by_offset(mouse_x, mouse_y)
-            action.perform()
-            self.random_sleep(sleep_range=(0, 0.05))
-            print(mouse_x, mouse_y)
+        pass
+        # action = ActionChains(self.driver)
+        #
+        # startElement = self.driver.find_element_by_id("//a[href]")
+        #
+        # # First, go to your start point or Element
+        # action.move_to_element_with_offset(startElement, 0, 0)
+        # action.perform()
+        #
+        # for mouse_x, mouse_y in get_bspline():
+        #     action.move_by_offset(mouse_x, mouse_y)
+        #     action.perform()
+        #     self.random_sleep(sleep_range=(0, 0.05))
+        #     print(mouse_x, mouse_y)
 
     def test_distil_bot_detection(self):
         # This website has distil technology.

@@ -1,0 +1,14 @@
+README.md
+setup.py
+seleniumX/__init__.py
+seleniumX/randomizer.py
+seleniumX/scraper.py
+seleniumX.egg-info/PKG-INFO
+seleniumX.egg-info/SOURCES.txt
+seleniumX.egg-info/dependency_links.txt
+seleniumX.egg-info/top_level.txt
+seleniumx.egg-info/PKG-INFO
+seleniumx.egg-info/SOURCES.txt
+seleniumx.egg-info/dependency_links.txt
+seleniumx.egg-info/requires.txt
+seleniumx.egg-info/top_level.txt
