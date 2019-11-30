@@ -6,3 +6,4 @@ __py*
 drivers.json
 geckodriver.log
 *.log
+*.egg

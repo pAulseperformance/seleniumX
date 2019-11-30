@@ -15,6 +15,8 @@ def test_webscraper_setup_teardown(tempd):
     ws.setup_driver(chrome_driver_path=tempd)
     ws.driver.get('https://www.google.com')
     assert ws.driver.title == 'Google'
+    # element = ws.driver.find_element_by_name("q")
+    # ws.random_send_keys("Hello World", element)
     ws.teardown_driver()
 
 

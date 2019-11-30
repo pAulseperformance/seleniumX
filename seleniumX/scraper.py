@@ -3,7 +3,7 @@ import time
 # from seleniumX.randomizer import get_bspline
 from sys import platform
 import os
-from typing import Tuple
+from typing import Tuple, Dict
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -71,14 +71,28 @@ class MyListener(AbstractEventListener):
 class ChromeFactory:
 
     @staticmethod
-    def create_chrome(version='latest', path=None):
+    def create_chrome(path=None, *args, **kwargs):
         """
         Build default Chrome instance.
         """
+        if 'version' in kwargs:
+            version = kwargs['version']
+        else:
+            version = 'latest'
 
-        chrome_driver_bin = ChromeDriverManager(version=version, path=path).install()
+        if 'options' in kwargs:
+            chrome_options = kwargs['options']
+        else:
+            chrome_options = ChromeFactory.build_chrome_options()
 
-        chrome_options = ChromeFactory.build_chrome_options()
+        if 'headless'in kwargs:
+            chrome_options.headless = kwargs['headless']
+
+        if 'chrome_driver_bin' in kwargs:
+            chrome_driver_bin = kwargs['chrome_driver_bin']
+        else:
+            chrome_driver_bin = ChromeDriverManager(version=version, path=path).install()
+
         driver = webdriver.Chrome(
             executable_path=chrome_driver_bin, options=chrome_options
         )
@@ -102,7 +116,6 @@ class ChromeFactory:
         # chrome configuration
         # More: https://github.com/SeleniumHQ/docker-selenium/issues/89
         # And: https://github.com/SeleniumHQ/docker-selenium/issues/87
-        # chrome_options.add_argument("--headless")
         chrome_options.headless = False
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-gpu")
@@ -132,6 +145,7 @@ class ChromeFactory:
         # These options remove password manager
         # chrome_options.add_experimental_option('credentials_enable_service', False)
         # chrome_options.add_experimental_option('profile.password_manager_enabled', False)
+
         # Testing these options
         # chrome_options.add_experimental_option("excludeSwitches", ['bypass-app-banner-engagement-checks',
         #                                                            'google-password-manager',
@@ -184,17 +198,17 @@ class ChromeFactory:
 
 class WebScraper:
     def __init__(self):
-        self.driver = None
+        self.driver: EventFiringWebDriver = None
         self.logger = logging.getLogger(__name__)
         self.logger.debug("creating an instance of %s", __class__)
         self.implicit_wait_range = IMPLICITLY_WAIT_RANGE
         self.implicit_wait_time = self.randomize_wait_time
 
-    def setup_driver(self, chrome_driver_path=None):
+    def setup_driver(self, chrome_driver_path=None, *args, **kwargs):
         if chrome_driver_path is None:
             chrome_driver_path = os.environ.get("CHROMEDRIVER_PATH", os.path.abspath("."))
 
-        self.driver = ChromeFactory.create_chrome(version='latest', path=chrome_driver_path)
+        self.driver = ChromeFactory.create_chrome(path=chrome_driver_path, *args, **kwargs)
         self.logger.info("Chromedriver Online.")
         self.logger.debug(
             f"Setting Driver Implicit wait time to: {self.implicit_wait_time}"
@@ -429,6 +443,17 @@ class WebScraper:
 
         return random_start_element.rect
 
+    def get_info(self) -> Dict:
+        info = {'title': self.driver.title,
+                'url': self.driver.current_url,
+                'page_source': self.driver.page_source,
+                'current_tab': self.driver.current_window_handle,
+                'user_data_dir': self.driver.capabilities['chrome']['userDataDir'],
+                'browserVersion': self.driver.capabilities['chrome']['browserVersion'],
+                'platformName': self.driver.capabilities['platformName'],
+                }
+
+        return info
 
     def __del__(self):
         self.teardown_driver()
