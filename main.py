@@ -42,12 +42,13 @@ search_btn.click()
 ws.wait().until(EC.title_contains("Hello World"))
 
 # Quickly grab all the unique links from a webpage
-ws.get_all_unique_links()
+unique_links = ws.get_all_unique_links()
+print(unique_links)
 
 # Js Functions
+# element = ws.driver.find_element_by_name('g')
 ws.js_scroll_to_bottom()
-element = ws.driver.find_element_by_name('g')
-ws.js_scroll_into_view(element)
+# ws.js_scroll_into_view(element)
 
 # Save a screenshot, by default will take the page title name as filename
 ws.save_screenshot()
@@ -55,6 +56,7 @@ ws.save_screenshot()
 ws.save_screenshot("Googlesearchresults")
 
 # Returns various info about the driver and page.
-ws.get_info()
+info = ws.get_info()
+print(info)
 
 # ws.driver.execute_script("document.getElementById('recaptcha-anchor').click()")
