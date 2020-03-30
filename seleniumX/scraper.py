@@ -85,6 +85,11 @@ class ChromeFactory:
         else:
             chrome_options = ChromeFactory.build_chrome_options()
 
+        if 'user_dir' in kwargs:
+            data_dir = kwargs['user_dir']
+            if data_dir:
+                chrome_options.add_argument(f"--user-data-dir={data_dir}")
+
         if 'headless'in kwargs:
             chrome_options.headless = kwargs['headless']
 
