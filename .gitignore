@@ -7,3 +7,5 @@ drivers.json
 geckodriver.log
 *.log
 *.egg
+dist
+build
